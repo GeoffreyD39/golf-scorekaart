@@ -1,0 +1,7 @@
+Golfscorekaart 2.1
+
+Golfclub Riel (Geldrop) is nu vooringevuld met par, stroke index en afstanden geel/rood op basis van de door gebruiker aangeleverde scorekaart.
+
+Upload de bestanden uit deze map naar de root van de GitHub-repository. Ga daarna naar Settings > Pages > Deploy from a branch > main / (root).
+
+Let op: de automatische internetzoekfunctie voor golfbanen is nog niet ingebouwd. Scores worden lokaal op de telefoon opgeslagen.

@@ -1,0 +1,122 @@
+<!doctype html>
+<html lang="nl"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#124b36"><meta name="apple-mobile-web-app-capable" content="yes">
+<title>Golfscorekaart</title><link rel="manifest" href="manifest.webmanifest">
+<style>
+:root{font-family:system-ui,-apple-system,Segoe UI,sans-serif;color:#17372b;background:#edf2ed}*{box-sizing:border-box}
+body{margin:0}.app{max-width:540px;margin:auto;padding:12px 12px 36px}header{background:#124b36;color:white;padding:18px;border-radius:16px}
+h1{font-size:22px;margin:2px 0}small{opacity:.8}.cards{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;margin:12px 0}
+.card{background:white;border-radius:12px;text-align:center;padding:10px 5px;min-width:0}.card input{width:100%;font-size:14px;text-align:center;border:0;border-bottom:1px solid #dce4dd;padding:4px 0;background:transparent}
+.card strong{display:block;font-size:27px;margin-top:4px}.card .diff{font-size:15px;font-weight:700;color:#346b4c}
+.panel{background:white;border-radius:14px;padding:14px;margin-top:12px;box-shadow:0 1px 3px #1232}
+.hole-nav{display:flex;align-items:center;justify-content:space-between}.hole-nav h2{margin:0;font-size:23px;text-align:center}.hole-nav p{margin:3px;text-align:center;color:#66796c}
+button{border:0;border-radius:10px;background:#166345;color:white;padding:12px 16px;font-size:15px;font-weight:650;cursor:pointer}
+button.secondary{background:#e8f0ea;color:#164b36}button:disabled{opacity:.35;cursor:default}
+.score-entry{display:flex;align-items:center;justify-content:space-between;padding:10px 0;border-bottom:1px solid #eef0ee}
+.score-entry:last-child{border:0}.score-entry .name{font-weight:650;min-width:70px;overflow:hidden;text-overflow:ellipsis}
+.adjust{display:flex;align-items:center;gap:12px}.adjust button{font-size:21px;padding:6px 13px;min-width:43px}.adjust b{font-size:22px;min-width:26px;text-align:center}
+table{border-collapse:collapse;width:100%;table-layout:fixed;font-size:13px}th,td{text-align:center;border-bottom:1px solid #e9eee9;padding:4px 2px;height:37px}
+th{background:#e8f0e9;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}td:first-child{font-weight:700}
+tr.selected{background:#eef8ed}tr.subtotal{background:#dceadf;font-weight:700}
+.mark{display:inline-flex;align-items:center;justify-content:center;width:27px;height:27px;font-weight:700}
+.circle{border:2px solid #17372b;border-radius:50%}.square{border:2px solid #17372b}
+.double-circle,.double-square{width:31px;height:31px;border:2px solid #17372b;position:relative}
+.double-circle{border-radius:50%}.double-circle::after,.double-square::after{content:"";position:absolute;inset:3px;border:1.5px solid #17372b;pointer-events:none}
+.double-circle::after{border-radius:50%}
+.actions{display:grid;gap:8px;margin-top:14px}.actions button{width:100%}
+.note{font-size:12px;color:#60756a;line-height:1.5}.status{font-size:12px;color:#60756a;margin:10px 0 0}
+#exportCanvas{display:none}
+</style></head><body><main class="app">
+<header><small id="roundDate"></small><h1>⛳ Golfscorekaart</h1><small id="courseInfo">Kies je golfbaan</small></header>
+<section class="panel"><label for="courseSelect"><b>Golfbaan</b></label><select id="courseSelect" style="display:block;width:100%;padding:12px;margin:8px 0;border:1px solid #cbdccf;border-radius:9px;font-size:16px"><option value="overloon">Golfbaan Overloon</option><option value="riel">Golfclub Riel – Geldrop</option><option value="bontebij">Golfpark De Bonte Bij – Uden</option></select><div id="courseMessage" class="note"></div></section><section class="cards" id="cards"></section>
+<section class="panel"><div class="hole-nav"><button class="secondary" id="prev" aria-label="Vorige hole">‹</button>
+<div><h2 id="holeTitle"></h2><p id="holePar"></p></div><button id="next" aria-label="Bevestig en volgende hole">›</button></div>
+<div id="entries"></div><button id="lastConfirm" style="display:none;width:100%;margin-top:12px">✓ Bevestig hole 18</button></section>
+<section class="panel"><h3>Overzicht scores</h3><table><thead><tr><th>Hole</th><th>Par</th><th id="n0"></th><th id="n1"></th><th id="n2"></th></tr></thead><tbody id="scoreRows"></tbody></table>
+<div class="actions"><button id="share">Deel scorekaart als afbeelding</button><button class="secondary" id="copy">Kopieer scores als tekst</button><button class="secondary" id="reset">Nieuwe blanco ronde</button></div>
+<p class="note">Tik op een hole om een score te corrigeren. Met › bevestig je de scores van de huidige hole. Je ronde wordt automatisch op dit apparaat bewaard.</p><p class="status" id="wakeStatus"></p></section>
+<canvas id="exportCanvas"></canvas></main>
+<script>
+const COURSES={overloon:{name:"Golfbaan Overloon",pars:[4,3,4,3,3,3,3,4,3,4,3,4,3,3,3,3,4,3],info:"18 holes · par 60 · geel · officiële scorekaart"},riel:{name:"Golfclub Riel – Geldrop",pars:[5,3,5,3,3,3,3,4,3],strokeIndex:[5,15,1,13,9,7,17,3,11],yellow:[282,80,463,58,160,188,98,348,154],red:[255,80,415,58,137,158,98,304,135],info:"9 holes · par 31 · geel/rood · scorekaart aangeleverd"},bontebij:{name:"Golfpark De Bonte Bij – Uden",pars:Array(9).fill(3),info:"9 holes · par 27 · par-3-baan"}};
+const KEY="golf-multibaan-v2";let PAR=COURSES.overloon.pars;
+function currentCourse(){return COURSES[data.course||"overloon"]}
+function updatePars(){PAR=currentCourse().pars}
+
+const fresh=()=>({names:["Geoffrey","Piet","Leon"],course:"overloon",scores:Array.from({length:18},()=>[null,null,null]),hole:0,date:new Date().toLocaleDateString("nl-NL")});
+let data;try{data=JSON.parse(localStorage.getItem(KEY))||fresh();if(!Array.isArray(data.scores)||!COURSES[data.course||"overloon"]) data=fresh()}catch{data=fresh()}
+updatePars();const $=id=>document.getElementById(id), save=()=>localStorage.setItem(KEY,JSON.stringify(data));
+const total=p=>data.scores.reduce((s,r)=>s+(r[p]??0),0);
+const delta=p=>data.scores.reduce((s,r,i)=>s+(r[p]===null?0:r[p]-PAR[i]),0);
+const deltaText=p=>!data.scores.some(r=>r[p]!==null)?"–":delta(p)>0?"+"+delta(p):String(delta(p));
+function mark(s,par){if(s===null)return '<span style="color:#9aa69d">–</span>';let d=s-par,c=d<=-2?"double-circle":d===-1?"circle":d===1?"square":d>=2?"double-square":"";return `<span class="mark ${c}">${s}</span>`}
+function render(){
+ updatePars();const course=currentCourse();$("courseSelect").value=data.course;$("courseInfo").textContent=course.info;
+ $("courseMessage").textContent=data.course==="riel"?"Riel: par, stroke index en afstanden (geel/rood) zijn ingevuld op basis van de aangeleverde scorekaart.":"De baan is geselecteerd. De scores worden lokaal op dit apparaat bewaard.";
+ const ready=PAR.length===data.scores.length&&PAR.length>0;
+ document.querySelectorAll("#prev,#next,#lastConfirm,#share").forEach(b=>b.disabled=!ready);
+ if(!ready){$("holeTitle").textContent="Baangegevens invullen";$("holePar").textContent="";$("entries").innerHTML="";$("scoreRows").innerHTML="";return}
+ $("roundDate").textContent=data.date;
+ $("cards").innerHTML=data.names.map((n,p)=>`<div class="card"><input aria-label="Naam speler ${p+1}" data-name="${p}" value="${escapeHtml(n)}"><strong>${total(p)}</strong><span class="diff">${deltaText(p)}</span></div>`).join("");
+ document.querySelectorAll("[data-name]").forEach(inp=>inp.addEventListener("input",e=>{data.names[+e.target.dataset.name]=e.target.value;save();document.querySelectorAll("#scoreRows th").forEach(()=>{});renderTable()}));
+ $("holeTitle").textContent=`Hole ${data.hole+1}`;$("holePar").textContent=`Par ${PAR[data.hole]}`;
+ $("prev").disabled=data.hole===0;$("next").style.display=data.hole===PAR.length-1?"none":"block";$("lastConfirm").style.display=data.hole===PAR.length-1?"block":"none";
+ $("entries").innerHTML=data.names.map((n,p)=>`<div class="score-entry"><span class="name">${escapeHtml(n||"Speler "+(p+1))}</span><div class="adjust"><button class="secondary" data-p="${p}" data-d="-1">−</button><b>${data.scores[data.hole][p]??PAR[data.hole]}</b><button data-p="${p}" data-d="1">+</button></div></div>`).join("");
+ document.querySelectorAll("[data-p]").forEach(b=>b.addEventListener("click",()=>{let p=+b.dataset.p,d=+b.dataset.d;data.scores[data.hole][p]=Math.max(1,(data.scores[data.hole][p]??PAR[data.hole])+d);save();render()}));
+ renderTable();
+}
+function renderTable(){
+ for(let p=0;p<3;p++)$("n"+p).textContent=data.names[p]||"S"+(p+1);
+ let h="";for(let i=0;i<PAR.length;i++){
+ h+=`<tr class="${i===data.hole?"selected":""}" data-hole="${i}"><td>${i+1}</td><td>${PAR[i]}</td>${data.scores[i].map(s=>`<td>${mark(s,PAR[i])}</td>`).join("")}</tr>`;
+ if((i===8&&PAR.length>9)||i===PAR.length-1){let end=i+1;h+=`<tr class="subtotal"><td>${i===8&&PAR.length>9?"Uit":"Totaal"}</td><td>${PAR.slice(0,end).reduce((a,b)=>a+b,0)}</td>${[0,1,2].map(p=>`<td>${data.scores.slice(0,end).reduce((s,r)=>s+(r[p]??0),0)}</td>`).join("")}</tr>`}
+ }$("scoreRows").innerHTML=h;
+ document.querySelectorAll("[data-hole]").forEach(tr=>tr.addEventListener("click",()=>{data.hole=+tr.dataset.hole;save();render();window.scrollTo({top:0,behavior:"smooth"})}));
+}
+function escapeHtml(s){return String(s).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]))}
+function confirmHole(){data.scores[data.hole]=data.scores[data.hole].map((s)=>s??PAR[data.hole]);save();render()}
+$("prev").onclick=()=>{data.hole=Math.max(0,data.hole-1);save();render()};
+$("next").onclick=()=>{confirmHole();data.hole=Math.min(PAR.length-1,data.hole+1);save();render()};
+$("lastConfirm").onclick=()=>{confirmHole();alert("Laatste hole bevestigd. Je kunt de scorekaart nu delen.")};
+$("courseSelect").onchange=e=>{const choice=e.target.value;if(choice===data.course)return;if(data.scores.some(r=>r.some(v=>v!==null))&&!confirm("Nieuwe baan kiezen? De huidige ronde wordt vervangen. Deel de huidige scores eerst als je ze wilt bewaren.")){e.target.value=data.course;return}data.course=choice;updatePars();data.hole=0;data.scores=Array.from({length:PAR.length},()=>[null,null,null]);save();render()};
+$("reset").onclick=()=>{if(confirm("Alle ingevulde scores wissen en een nieuwe ronde starten?")){const course=data.course,names=data.names;data=fresh();data.course=course;data.names=names;updatePars();data.scores=Array.from({length:PAR.length},()=>[null,null,null]);save();render()}};
+function exportText(){return `${currentCourse().name} · ${data.date}\n${data.names.map((n,p)=>`${n}: ${total(p)} slagen (${deltaText(p)})`).join("\n")}\n\nHole | Par | ${data.names.join(" | ")}\n${data.scores.map((r,i)=>`${i+1} | ${PAR[i]} | ${r.map(s=>s??"–").join(" | ")}`).join("\n")}`}
+$("copy").onclick=async()=>{try{await navigator.clipboard.writeText(exportText());alert("Scores gekopieerd")}catch{alert("Kopiëren is niet beschikbaar op dit apparaat.")}};
+function drawExport(){
+ const c=$("exportCanvas"),ctx=c.getContext("2d"),W=1080,H=PAR.length===9?1150:1620;c.width=W;c.height=H;
+ ctx.fillStyle="#f0f5ef";ctx.fillRect(0,0,W,H);
+ ctx.fillStyle="#124b36";ctx.fillRect(0,0,W,220);ctx.fillStyle="#fff";ctx.font="bold 55px system-ui";ctx.fillText(currentCourse().name.toUpperCase(),58,90);ctx.font="30px system-ui";ctx.fillText(`${data.date} · ${PAR.length} holes · Par ${PAR.reduce((a,b)=>a+b,0)}`,58,150);
+ const x=[64,205,350,580,810], widths=[130,130,220,220,220];
+ function cell(text,col,y,bold=false){ctx.fillStyle="#183b2b";ctx.font=`${bold?"bold ":""}${col<2?29:28}px system-ui`;ctx.textAlign="center";ctx.fillText(String(text),x[col]+widths[col]/2,y+37);ctx.textAlign="left"}
+ function row(y,values,shade){ctx.fillStyle=shade;ctx.fillRect(55,y,970,58);values.forEach((v,j)=>cell(v,j,y,shade==="#d5e7d9"))}
+ row(252,["Hole","Par",...data.names.map(n=>n.slice(0,12))],"#c1dcc9");
+ for(let i=0;i<PAR.length;i++){
+  const y=310+i*54;
+  row(y,[i+1,PAR[i],...data.scores[i].map(s=>s??"–")],i%2===0?"#ffffff":"#eaf1eb");
+  data.scores[i].forEach((s,p)=>{if(s===null)return;const d=s-PAR[i],cx=x[p+2]+widths[p+2]/2,cy=y+27;ctx.strokeStyle="#124b36";ctx.lineWidth=3;
+    function shape(inset){let r=19-inset;if(d<0){ctx.beginPath();ctx.arc(cx,cy,r,0,Math.PI*2);ctx.stroke()}else{ctx.strokeRect(cx-r,cy-r,r*2,r*2)}}
+    if(d!==0){shape(0);if(d<=-2||d>=2)shape(5)}
+  });
+ }
+ const footerY=310+PAR.length*54+12;row(footerY,["Totaal",PAR.reduce((a,b)=>a+b,0),...[0,1,2].map(total)],"#d5e7d9");
+ ctx.fillStyle="#124b36";ctx.font="bold 36px system-ui";ctx.fillText("EINDUITSLAG",64,footerY+125);
+ ctx.font="28px system-ui";[0,1,2].forEach((p)=>{ctx.fillText(`${data.names[p]}: ${total(p)} slagen (${deltaText(p)})`,64,footerY+175+p*39)});
+ return new Promise(resolve=>c.toBlob(resolve,"image/png"));
+}
+$("share").onclick=async()=>{
+ const blob=await drawExport();if(!blob){alert("Afbeelding maken mislukt");return}
+ const file=new File([blob],"golfscorekaart-"+data.course+".png",{type:"image/png"});
+ if(navigator.canShare?.({files:[file]})){try{await navigator.share({files:[file],title:"Golfscorekaart"});return}catch(e){if(e.name==="AbortError")return}}
+ const url=URL.createObjectURL(blob),a=document.createElement("a");a.href=url;a.download=file.name;a.click();setTimeout(()=>URL.revokeObjectURL(url),2000);
+};
+let wake=null;
+async function wakeLock(){
+ if(document.visibilityState!=="visible")return;
+ if(!("wakeLock" in navigator)){$("wakeStatus").textContent="Scherm aanhouden wordt door deze browser niet ondersteund.";return}
+ try{wake=await navigator.wakeLock.request("screen");$("wakeStatus").textContent="Scherm blijft aan zolang de scorekaart zichtbaar is.";
+ wake.addEventListener("release",()=>{$("wakeStatus").textContent="Scherm-aanfunctie onderbroken."})}
+ catch(e){$("wakeStatus").textContent="Scherm aanhouden is momenteel niet beschikbaar (bijvoorbeeld door energiebesparing)."}
+}
+document.addEventListener("visibilitychange",()=>{if(document.visibilityState==="visible")wakeLock()});
+render();wakeLock();
+if("serviceWorker" in navigator&&location.protocol.startsWith("http"))navigator.serviceWorker.register("./sw.js").catch(()=>{});
+</script></body></html>
