@@ -52,7 +52,6 @@ function mark(s,par){if(s===null)return '<span style="color:#9aa69d">–</span>'
 function render(){
  updatePars();const course=currentCourse();$("courseSelect").value=data.course;$("courseInfo").textContent=course.info;
  $("courseMessage").textContent=data.course==="riel"?"Riel: par, stroke index en afstanden (geel/rood) zijn ingevuld op basis van de aangeleverde scorekaart.":"De baan is geselecteerd. De scores worden lokaal op dit apparaat bewaard.";
- $("courseEditor").style.display="none";
  const ready=PAR.length===data.scores.length&&PAR.length>0;
  document.querySelectorAll("#prev,#next,#lastConfirm,#share").forEach(b=>b.disabled=!ready);
  if(!ready){$("holeTitle").textContent="Baangegevens invullen";$("holePar").textContent="";$("entries").innerHTML="";$("scoreRows").innerHTML="";return}
