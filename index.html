@@ -37,7 +37,7 @@ tr.selected{background:#eef8ed}tr.subtotal{background:#dceadf;font-weight:700}
 <p class="note">Tik op een hole om een score te corrigeren. Met › bevestig je de scores van de huidige hole. Je ronde wordt automatisch op dit apparaat bewaard.</p><p class="status" id="wakeStatus"></p></section>
 <canvas id="exportCanvas"></canvas></main>
 <script>
-const COURSES={overloon:{name:"Golfbaan Overloon",pars:[4,3,4,3,3,3,3,4,3,4,3,4,3,3,3,3,4,3],info:"18 holes · par 60 · geel · officiële scorekaart"},riel:{name:"Golfclub Riel – Geldrop",pars:[5,3,5,3,3,3,3,4,3],strokeIndex:[5,15,1,13,9,7,17,3,11],yellow:[282,80,463,58,160,188,98,348,154],red:[255,80,415,58,137,158,98,304,135],info:"9 holes · par 31 · geel/rood · scorekaart aangeleverd"},bontebij:{name:"Golfpark De Bonte Bij – Uden",pars:Array(9).fill(3),info:"9 holes · par 27 · par-3-baan"}};
+const COURSES={overloon:{name:"Golfbaan Overloon",pars:[4,3,4,3,3,3,3,4,3,4,3,4,3,3,3,3,4,3],info:"18 holes · par 60 · geel · officiële scorekaart"},riel:{name:"Golfclub Riel – Geldrop",pars:[4,3,5,3,3,3,3,4,3],strokeIndex:[5,15,1,13,9,7,17,3,11],yellow:[282,80,463,58,160,188,98,348,154],red:[255,80,415,58,137,158,98,304,135],info:"9 holes · par 31 · geel/rood · scorekaart aangeleverd"},bontebij:{name:"Golfpark De Bonte Bij – Uden",pars:Array(9).fill(3),info:"9 holes · par 27 · par-3-baan"}};
 const KEY="golf-multibaan-v2";let PAR=COURSES.overloon.pars;
 function currentCourse(){return COURSES[data.course||"overloon"]}
 function updatePars(){PAR=currentCourse().pars}
@@ -52,6 +52,7 @@ function mark(s,par){if(s===null)return '<span style="color:#9aa69d">–</span>'
 function render(){
  updatePars();const course=currentCourse();$("courseSelect").value=data.course;$("courseInfo").textContent=course.info;
  $("courseMessage").textContent=data.course==="riel"?"Riel: par, stroke index en afstanden (geel/rood) zijn ingevuld op basis van de aangeleverde scorekaart.":"De baan is geselecteerd. De scores worden lokaal op dit apparaat bewaard.";
+ $("courseEditor").style.display="none";
  const ready=PAR.length===data.scores.length&&PAR.length>0;
  document.querySelectorAll("#prev,#next,#lastConfirm,#share").forEach(b=>b.disabled=!ready);
  if(!ready){$("holeTitle").textContent="Baangegevens invullen";$("holePar").textContent="";$("entries").innerHTML="";$("scoreRows").innerHTML="";return}
